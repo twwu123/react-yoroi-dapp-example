@@ -5,11 +5,12 @@ import NFTTab from "./subtabs/NFTTab";
 import {
     Routes,
     Route,
-    Link
+    Link,
+    useLocation
 } from "react-router-dom";
 
 const MainTab = () => {
-    const [currentTab, setCurrentTab] = useState("CIP-30")
+    const { pathname } = useLocation()
 
     const ACTIVE_COLOURS = "text-blue-600 active bg-gray-800 text-blue-500"
     const INACTIVE_COLOURS = "hover:bg-gray-800 hover:text-gray-300"
@@ -20,20 +21,17 @@ const MainTab = () => {
                 <ul className="flex flex-wrap text-sm font-medium text-center border-b border-gray-700 text-gray-400">
                     <li className="mr-2">
                         <Link to="CIP-30">
-                            <button className={"inline-block p-4 rounded-t-lg " + (currentTab === "CIP-30" ? ACTIVE_COLOURS : INACTIVE_COLOURS)}
-                                onClick={() => { setCurrentTab("CIP-30") }}>CIP-30</button>
+                            <button className={"inline-block p-4 rounded-t-lg " + (pathname === "/CIP-30" ? ACTIVE_COLOURS : INACTIVE_COLOURS)}>CIP-30</button>
                         </Link>
                     </li>
                     <li className="mr-2">
                         <Link to="Contracts">
-                            <button className={"inline-block p-4 rounded-t-lg " + (currentTab === "Contracts" ? ACTIVE_COLOURS : INACTIVE_COLOURS)}
-                                onClick={() => { setCurrentTab("Contracts") }}>Contracts</button>
+                            <button className={"inline-block p-4 rounded-t-lg " + (pathname === "/Contracts" ? ACTIVE_COLOURS : INACTIVE_COLOURS)}>Contracts</button>
                         </Link>
                     </li>
                     <li className="mr-2">
                         <Link to="NFTs">
-                            <button className={"inline-block p-4 rounded-t-lg" + (currentTab === "NFTs" ? ACTIVE_COLOURS : INACTIVE_COLOURS)}
-                                onClick={() => { setCurrentTab("NFTs") }}>NFTs</button>
+                            <button className={"inline-block p-4 rounded-t-lg" + (pathname === "/NFTs" ? ACTIVE_COLOURS : INACTIVE_COLOURS)}>NFTs</button>
                         </Link>
                     </li>
                 </ul>
