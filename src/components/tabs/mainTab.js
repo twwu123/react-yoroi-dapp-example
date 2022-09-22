@@ -1,4 +1,3 @@
-import { useState } from "react";
 import Cip30Tab from "./subtabs/cip30Tab";
 import ContractTab from "./subtabs/contractTab";
 import NFTTab from "./subtabs/NFTTab";
