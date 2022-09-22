@@ -24,9 +24,7 @@ const MainTab = () => {
                         </Link>
                     </li>
                     <li className="mr-2">
-                        <Link to="Contracts">
-                            <button className={"inline-block p-4 rounded-t-lg " + (pathname === "/Contracts" ? ACTIVE_COLOURS : INACTIVE_COLOURS)}>Contracts</button>
-                        </Link>
+                        <button className={"inline-block p-4 rounded-t-lg cursor-not-allowed " + (pathname === "/Contracts" ? ACTIVE_COLOURS : INACTIVE_COLOURS)}>Contracts</button>
                     </li>
                     <li className="mr-2">
                         <Link to="NFTs">

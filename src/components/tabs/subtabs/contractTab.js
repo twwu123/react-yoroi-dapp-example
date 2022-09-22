@@ -34,38 +34,46 @@ const ContractSave = ({ contractInfo, setContractInfo }) => {
     }
 
     return (
-        <div className="grid justify-items-center py-5 px-5">
-            <div className="block p-6 min-w-full rounded-lg border shadow-md bg-gray-800 border-gray-700">
-                <div className="mb-6">
-                    <label htmlFor="address" className="block mb-2 text-sm font-medium text-gray-300">Contract Address</label>
-                    <input type="text" id="address" className="border text-sm rounded-lg block w-full p-2.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white focus:ring-blue-500 focus:border-blue-500"
-                        value={contractInfo.contractAddress} onChange={(event) => { setContractInfo({ ...contractInfo, contractAddress: event.target.value }) }} />
-                </div>
-                <div className="mb-6">
-                    <label htmlFor="hex" className="block mb-2 text-sm font-medium text-gray-300">Contract Hex</label>
-                    <input type="text" id="hex" className="border text-sm rounded-lg block w-full p-2.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white focus:ring-blue-500 focus:border-blue-500"
-                        value={contractInfo.contractHex} onChange={(event) => { setContractInfo({ ...contractInfo, contractHex: event.target.value }) }} />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <button type="button" className="text-white font-medium rounded-lg text-sm sm:w-auto px-5 py-2.5 text-center bg-blue-600 hover:bg-blue-700 focus:ring-blue-800"
-                            onClick={saveContract}>Save</button>
+        <>
+            <div className="grid justify-items-center py-5 px-5">
+                <div className="block p-6 min-w-full rounded-lg border shadow-md bg-gray-800 border-gray-700">
+                    <div className="text-white">
+                        Note: Work in progress, it is not really usable at the moment. Please ignore this tab
                     </div>
-                    <div>
-                        <div className="flex-grow">
-                            <textarea className="w-full h-full flex-row rounded bg-gray-900 text-white px-2 resize-none" disabled readOnly value={contractSaveText}></textarea>
+                </div>
+            </div>
+            <div className="grid justify-items-center py-5 px-5">
+                <div className="block p-6 min-w-full rounded-lg border shadow-md bg-gray-800 border-gray-700">
+                    <div className="mb-6">
+                        <label htmlFor="address" className="block mb-2 text-sm font-medium text-gray-300">Contract Address</label>
+                        <input type="text" id="address" className="border text-sm rounded-lg block w-full p-2.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white focus:ring-blue-500 focus:border-blue-500"
+                            value={contractInfo.contractAddress} onChange={(event) => { setContractInfo({ ...contractInfo, contractAddress: event.target.value }) }} />
+                    </div>
+                    <div className="mb-6">
+                        <label htmlFor="hex" className="block mb-2 text-sm font-medium text-gray-300">Contract Hex</label>
+                        <input type="text" id="hex" className="border text-sm rounded-lg block w-full p-2.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white focus:ring-blue-500 focus:border-blue-500"
+                            value={contractInfo.contractHex} onChange={(event) => { setContractInfo({ ...contractInfo, contractHex: event.target.value }) }} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <button type="button" className="text-white font-medium rounded-lg text-sm sm:w-auto px-5 py-2.5 text-center bg-blue-600 hover:bg-blue-700 focus:ring-blue-800"
+                                onClick={saveContract}>Save</button>
+                        </div>
+                        <div>
+                            <div className="flex-grow">
+                                <textarea className="w-full h-full flex-row rounded bg-gray-900 text-white px-2 resize-none" disabled readOnly value={contractSaveText}></textarea>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </>
     )
 }
 
 const SendToContract = ({ contractInfo }) => {
     const { api } = useYoroi()
     const wasm = useWasm()
-    const jsonDataToWasmDatum = useJsonDataToWasmDatum()
 
     const [sendTxInfo, setSendTxInfo] = useState({
         value: {
@@ -125,7 +133,7 @@ const SendToContract = ({ contractInfo }) => {
         )
 
         // build the actual output, we need the output's Datum and the value. Then we output it all to the script's address
-        const wasmDatum = jsonDataToWasmDatum(sendTxInfo.datum)
+        const wasmDatum = wasm.encode_json_str_to_plutus_datum(JSON.stringify(sendTxInfo.datum))
 
         wasmOutput.set_plutus_data(wasmDatum)
         txBuilder.add_output(wasmOutput)
@@ -180,107 +188,109 @@ const SendToContract = ({ contractInfo }) => {
     }
 
     return (
-        <div className="block p-6 min-w-full rounded-lg border shadow-md bg-gray-800 border-gray-700">
-            <div className="mb-6">
-                <label htmlFor="ada" className="block mb-2 text-sm font-medium text-gray-300">Lovelaces Value</label>
-                <input type="text" id="ada" className="border text-sm rounded-lg block w-full p-2.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white focus:ring-blue-500 focus:border-blue-500"
-                    value={sendTxInfo.value.ada} onChange={(event) => { setSendTxInfo({ ...sendTxInfo, value: { ...sendTxInfo.value, ada: event.target.value } }) }} />
-            </div>
-            <div className="mb-6">
-                <label className="block mb-2 text-sm font-medium text-gray-300">Datum JSON</label>
-                <textarea className="flex-row w-full rounded bg-gray-900 text-white px-2" value={sendTxInfo.datum}
-                    onChange={(event) => { setSendTxInfo({ ...sendTxInfo, datum: event.target.value }) }}></textarea>
-            </div>
-            {sendTxInfo.value.assets.map((v, idx) => {
-                return (
-                    <div className="bg-gray-900 grid gap-6 md:grid-cols-2 px-5 py-5">
-                        <textarea className="flex-row w-full rounded bg-gray-900 text-white px-2 resize-none" disabled readOnly value={JSON.stringify(v)} key={idx}></textarea>
-                        <button
-                            className="bg-red-500 text-white active:bg-emerald-600 font-bold uppercase text-sm px-6 py-3 rounded shadow hover:shadow-lg outline-none focus:outline-none mr-1 mb-1 ease-linear transition-all duration-150"
-                            type="button"
-                            onClick={() => {
-                                const sendTxInfoCopy = { ...sendTxInfo }
-                                sendTxInfoCopy.value.assets.splice(idx, 1)
-                                setSendTxInfo(sendTxInfoCopy)
-                            }}
-                        >
-                            Delete
-                        </button>
-                    </div>
-                )
-            })}
-            <div className="grid justify-items-center pb-2 py-3">
-                <button className="block text-white font-medium rounded-lg text-sm px-5 py-2.5 text-center bg-gray-600 hover:bg-gray-700 focus:ring-gray-800" type="button"
-                    onClick={() => setShowAssetModal(!showAssetModal)} >
-                    Add Assets
-                </button >
-                {showAssetModal &&
-                    <div className="overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 w-full md:inset-0 h-modal md:h-full">
-                        <div
-                            className="justify-center items-center flex overflow-x-hidden overflow-y-auto fixed inset-0 z-50 outline-none focus:outline-none"
-                        >
-                            <div className="relative w-auto my-6 mx-auto max-w-3xl">
-                                {/*content*/}
-                                <div className="bg-gray-900 border-0 rounded-lg shadow-lg relative flex flex-col w-full bg-white outline-none focus:outline-none">
-                                    {/*header*/}
-                                    <div className="bg-gray-900 flex items-start justify-between p-5 rounded-t">
-                                        <h3 className="text-3xl font-semibold text-white">
-                                            Asset
-                                        </h3>
-                                        <button
-                                            className="p-1 ml-auto bg-transparent border-0 text-white float-right text-3xl leading-none font-semibold outline-none focus:outline-none"
-                                            onClick={() => setShowAssetModal(false)}
-                                        >
-                                            ×
-                                        </button>
-                                    </div>
-                                    {/*body*/}
-                                    <div className="bg-gray-900 grid gap-6 md:grid-cols-2 px-5 py-5 ">
-                                        <div>
-                                            <label htmlFor="policyId" className="block mb-2 text-sm font-medium text-gray-300">Policy Id (in hex)</label>
-                                            <input type="text" id="policyId" className="appearance-none border text-sm rounded-lg block w-full p-2.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white focus:ring-blue-500 focus:border-blue-500"
-                                                value={currentAssetInfo.policyId} onChange={(event) => setCurrentAssetInfo({ ...currentAssetInfo, policyId: event.target.value })} />
+        <>
+            <div className="block p-6 min-w-full rounded-lg border shadow-md bg-gray-800 border-gray-700">
+                <div className="mb-6">
+                    <label htmlFor="ada" className="block mb-2 text-sm font-medium text-gray-300">Lovelaces Value</label>
+                    <input type="text" id="ada" className="border text-sm rounded-lg block w-full p-2.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white focus:ring-blue-500 focus:border-blue-500"
+                        value={sendTxInfo.value.ada} onChange={(event) => { setSendTxInfo({ ...sendTxInfo, value: { ...sendTxInfo.value, ada: event.target.value } }) }} />
+                </div>
+                <div className="mb-6">
+                    <label className="block mb-2 text-sm font-medium text-gray-300">Datum JSON</label>
+                    <textarea className="flex-row w-full rounded bg-gray-900 text-white px-2" value={sendTxInfo.datum}
+                        onChange={(event) => { setSendTxInfo({ ...sendTxInfo, datum: event.target.value }) }}></textarea>
+                </div>
+                {sendTxInfo.value.assets.map((v, idx) => {
+                    return (
+                        <div className="bg-gray-900 grid gap-6 md:grid-cols-2 px-5 py-5">
+                            <textarea className="flex-row w-full rounded bg-gray-900 text-white px-2 resize-none" disabled readOnly value={JSON.stringify(v)} key={idx}></textarea>
+                            <button
+                                className="bg-red-500 text-white active:bg-emerald-600 font-bold uppercase text-sm px-6 py-3 rounded shadow hover:shadow-lg outline-none focus:outline-none mr-1 mb-1 ease-linear transition-all duration-150"
+                                type="button"
+                                onClick={() => {
+                                    const sendTxInfoCopy = { ...sendTxInfo }
+                                    sendTxInfoCopy.value.assets.splice(idx, 1)
+                                    setSendTxInfo(sendTxInfoCopy)
+                                }}
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    )
+                })}
+                <div className="grid justify-items-center pb-2 py-3">
+                    <button className="block text-white font-medium rounded-lg text-sm px-5 py-2.5 text-center bg-gray-600 hover:bg-gray-700 focus:ring-gray-800" type="button"
+                        onClick={() => setShowAssetModal(!showAssetModal)} >
+                        Add Assets
+                    </button >
+                    {showAssetModal &&
+                        <div className="overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 w-full md:inset-0 h-modal md:h-full">
+                            <div
+                                className="justify-center items-center flex overflow-x-hidden overflow-y-auto fixed inset-0 z-50 outline-none focus:outline-none"
+                            >
+                                <div className="relative w-auto my-6 mx-auto max-w-3xl">
+                                    {/*content*/}
+                                    <div className="bg-gray-900 border-0 rounded-lg shadow-lg relative flex flex-col w-full bg-white outline-none focus:outline-none">
+                                        {/*header*/}
+                                        <div className="bg-gray-900 flex items-start justify-between p-5 rounded-t">
+                                            <h3 className="text-3xl font-semibold text-white">
+                                                Asset
+                                            </h3>
+                                            <button
+                                                className="p-1 ml-auto bg-transparent border-0 text-white float-right text-3xl leading-none font-semibold outline-none focus:outline-none"
+                                                onClick={() => setShowAssetModal(false)}
+                                            >
+                                                ×
+                                            </button>
                                         </div>
-                                        <div>
-                                            <label htmlFor="name" className="block mb-2 text-sm font-medium text-gray-300">Name (in hex)</label>
-                                            <input type="text" id="name" className="border text-sm rounded-lg block w-full p-2.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white focus:ring-blue-500 focus:border-blue-500"
-                                                value={currentAssetInfo.name} onChange={(event) => setCurrentAssetInfo({ ...currentAssetInfo, name: event.target.value })} />
+                                        {/*body*/}
+                                        <div className="bg-gray-900 grid gap-6 md:grid-cols-2 px-5 py-5 ">
+                                            <div>
+                                                <label htmlFor="policyId" className="block mb-2 text-sm font-medium text-gray-300">Policy Id (in hex)</label>
+                                                <input type="text" id="policyId" className="appearance-none border text-sm rounded-lg block w-full p-2.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white focus:ring-blue-500 focus:border-blue-500"
+                                                    value={currentAssetInfo.policyId} onChange={(event) => setCurrentAssetInfo({ ...currentAssetInfo, policyId: event.target.value })} />
+                                            </div>
+                                            <div>
+                                                <label htmlFor="name" className="block mb-2 text-sm font-medium text-gray-300">Name (in hex)</label>
+                                                <input type="text" id="name" className="border text-sm rounded-lg block w-full p-2.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white focus:ring-blue-500 focus:border-blue-500"
+                                                    value={currentAssetInfo.name} onChange={(event) => setCurrentAssetInfo({ ...currentAssetInfo, name: event.target.value })} />
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="bg-gray-900 px-5">
-                                        <div>
-                                            <label htmlFor="amount" className="block mb-2 text-sm font-medium text-gray-300">Amount</label>
-                                            <input type="number" min="0" id="amount" className="border text-sm rounded-lg block w-full p-2.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white focus:ring-blue-500 focus:border-blue-500"
-                                                value={currentAssetInfo.amount} onChange={(event) => setCurrentAssetInfo({ ...currentAssetInfo, amount: event.target.value })} />
+                                        <div className="bg-gray-900 px-5">
+                                            <div>
+                                                <label htmlFor="amount" className="block mb-2 text-sm font-medium text-gray-300">Amount</label>
+                                                <input type="number" min="0" id="amount" className="border text-sm rounded-lg block w-full p-2.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white focus:ring-blue-500 focus:border-blue-500"
+                                                    value={currentAssetInfo.amount} onChange={(event) => setCurrentAssetInfo({ ...currentAssetInfo, amount: event.target.value })} />
+                                            </div>
                                         </div>
-                                    </div>
-                                    {/*footer*/}
-                                    <div className="bg-gray-900 flex items-center justify-end p-6 rounded-b">
-                                        <button
-                                            className="bg-emerald-500 text-white active:bg-emerald-600 font-bold uppercase text-sm px-6 py-3 rounded shadow hover:shadow-lg outline-none focus:outline-none mr-1 mb-1 ease-linear transition-all duration-150"
-                                            type="button"
-                                            onClick={() => pushAsset()}
-                                        >
-                                            Add Asset
-                                        </button>
-                                        <button
-                                            className="bg-emerald-500 text-white active:bg-emerald-600 font-bold uppercase text-sm px-6 py-3 rounded shadow hover:shadow-lg outline-none focus:outline-none mr-1 mb-1 ease-linear transition-all duration-150"
-                                            type="button"
-                                            onClick={() => setShowAssetModal(false)}
-                                        >
-                                            Close
-                                        </button>
+                                        {/*footer*/}
+                                        <div className="bg-gray-900 flex items-center justify-end p-6 rounded-b">
+                                            <button
+                                                className="bg-emerald-500 text-white active:bg-emerald-600 font-bold uppercase text-sm px-6 py-3 rounded shadow hover:shadow-lg outline-none focus:outline-none mr-1 mb-1 ease-linear transition-all duration-150"
+                                                type="button"
+                                                onClick={() => pushAsset()}
+                                            >
+                                                Add Asset
+                                            </button>
+                                            <button
+                                                className="bg-emerald-500 text-white active:bg-emerald-600 font-bold uppercase text-sm px-6 py-3 rounded shadow hover:shadow-lg outline-none focus:outline-none mr-1 mb-1 ease-linear transition-all duration-150"
+                                                type="button"
+                                                onClick={() => setShowAssetModal(false)}
+                                            >
+                                                Close
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>}
+                        </div>}
+                </div>
+                <div>
+                    <button type="button" className="text-white font-medium rounded-lg text-sm sm:w-auto px-5 py-2.5 text-center bg-blue-600 hover:bg-blue-700 focus:ring-blue-800"
+                        onClick={sendToContract}>Send To Contract</button>
+                </div>
             </div>
-            <div>
-                <button type="button" className="text-white font-medium rounded-lg text-sm sm:w-auto px-5 py-2.5 text-center bg-blue-600 hover:bg-blue-700 focus:ring-blue-800"
-                    onClick={sendToContract}>Send To Contract</button>
-            </div>
-        </div>
+        </>
     );
 }
 
