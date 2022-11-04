@@ -16,7 +16,7 @@ const AccessButton = () => {
         {api ?
           <div className="py-5 text-xl font-bold tracking-tight text-white">
             Connected To Yoroi
-            <div className="py-5 text-xl font-bold tracking-tight text-white text-center">
+            <div className="py-1 text-xl font-bold tracking-tight text-white text-center">
               {getWalletPlate(api)}
             </div>
           </div> :
