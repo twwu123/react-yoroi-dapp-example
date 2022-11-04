@@ -62,7 +62,7 @@ const NFTTab = () => {
         for (let i = 0; i < mintingTxInfo.length; i++) {
             let metadata = {}
             metadata[wasmNativeScript.hash().to_hex()] = {}
-            metadata[wasmNativeScript.hash().to_hex()][mintingTxInfo[i].NFTName] = mintingTxInfo[i].metadata
+            metadata[wasmNativeScript.hash().to_hex()][bytesToHex(Buffer.from(mintingTxInfo[i].NFTName, "utf8"))] = mintingTxInfo[i].metadata
             console.log(metadata)
             txBuilder.add_json_metadatum(wasm.BigNum.from_str("721"), JSON.stringify(mintingTxInfo[i].metadata))
             txBuilder.add_mint_asset_and_output_min_required_coin(wasmNativeScript,
@@ -71,6 +71,8 @@ const NFTTab = () => {
                 wasm.TransactionOutputBuilder.new().with_address(wasmChangeAddress).next()
             )
         }
+
+        
 
         const hexInputUtxos = await api?.getUtxos()
 
