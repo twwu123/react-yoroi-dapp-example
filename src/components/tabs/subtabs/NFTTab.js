@@ -10,24 +10,16 @@ const NFTTab = () => {
 
     const [currentMintingInfo, setCurrentMintingInfo] = useState({
         NFTName: "", metadata: JSON.stringify({
-            "721": {
-                "<policy_id>": {
-                    "<asset_name>": {
-                        "name": "<string>",
-                        "image": "<uri | array>",
-                        "mediaType": "image/<mime_sub_type>",
-                        "description": "<string | array>",
-                        "files": [{
-                            "name": "<string>",
-                            "mediaType": "<mime_type>",
-                            "src": "<uri | array>",
-                            "<other_properties>": "<other_properties>"
-                        }],
-                        "<other_properties>": "<other_properties>"
-                    }
-                },
-                "version": "<version_id>"
-            }
+            "name": "<string>",
+            "image": "<uri | array>",
+            "mediaType": "image/<mime_sub_type>",
+            "description": "<string | array>",
+            "files": [{
+                "name": "<string>",
+                "mediaType": "<mime_type>",
+                "src": "<uri | array>",
+                "<other_properties>": "<other_properties>"
+            }],
         }, null, 4)
     })
     const [mintingTxInfo, setMintingTxInfo] = useState([])
@@ -68,7 +60,11 @@ const NFTTab = () => {
         const wasmNativeScript = wasm.NativeScript.new_script_pubkey(wasm.ScriptPubkey.new(pubkeyHash))
 
         for (let i = 0; i < mintingTxInfo.length; i++) {
-            txBuilder.add_json_metadatum(wasm.BigNum.from_str("721"), JSON.stringify(mintingTxInfo[i].metadata["721"]))
+            let metadata = {}
+            metadata[wasmNativeScript.hash().to_hex()] = {}
+            metadata[wasmNativeScript.hash().to_hex()][mintingTxInfo[i].NFTName] = mintingTxInfo[i].metadata
+            console.log(metadata)
+            txBuilder.add_json_metadatum(wasm.BigNum.from_str("721"), JSON.stringify(mintingTxInfo[i].metadata))
             txBuilder.add_mint_asset_and_output_min_required_coin(wasmNativeScript,
                 wasm.AssetName.new(Buffer.from(mintingTxInfo[i].NFTName, "utf8")),
                 wasm.Int.new_i32(1),
