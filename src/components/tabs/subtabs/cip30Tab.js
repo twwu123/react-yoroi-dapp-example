@@ -1,6 +1,6 @@
 import { useState } from "react";
 import useYoroi from "../../../hooks/yoroiProvider";
-import useWasm, { useWasmTxBuilder } from "../../../hooks/useWasm";
+import useWasm from "../../../hooks/useWasm";
 import { hexToBytes, bytesToHex, wasmMultiassetToJSONs } from "../../../utils/utils"
 
 const Cip30Tab = () => {
@@ -423,25 +423,42 @@ const SignTransactionCard = ({ api, wasm }) => {
     const [signTransactionText, setSignTransactionText] = useState("")
     const [buildTransactionInput, setBuildTransactionInput] = useState({ amount: "2000000", address: "" })
     const [signTransactionInput, setSignTransactionInput] = useState("")
-    const txBuilder = useWasmTxBuilder()
 
     const buildTransaction = async () => {
-        // We add half an ADA more for fees
-        const adaValue = (Number(buildTransactionInput.amount) + 500000).toString()
-        const hexUtxos = await api?.getUtxos(adaValue)
+        const txBuilder = wasm?.TransactionBuilder.new(
+            wasm.TransactionBuilderConfigBuilder.new()
+                .fee_algo(
+                    wasm.LinearFee.new(
+                        wasm.BigNum.from_str("44"),
+                        wasm.BigNum.from_str("155381")
+                    )
+                )
+                .coins_per_utxo_word(wasm.BigNum.from_str('34482'))
+                .pool_deposit(wasm.BigNum.from_str('500000000'))
+                .key_deposit(wasm.BigNum.from_str('2000000'))
+                .ex_unit_prices(wasm.ExUnitPrices.new(
+                    wasm.UnitInterval.new(wasm.BigNum.from_str("577"), wasm.BigNum.from_str("10000")),
+                    wasm.UnitInterval.new(wasm.BigNum.from_str("721"), wasm.BigNum.from_str("10000000"))
+                ))
+                .max_value_size(5000)
+                .max_tx_size(16384)
+                .build()
+        )
 
-        const txInputsBuilder = wasm.TxInputsBuilder.new()
-        for (let i = 0; i < hexUtxos.length; i++) {
-            const wasmUtxo = wasm.TransactionUnspentOutput.from_bytes(hexToBytes(hexUtxos[i]))
-            txInputsBuilder.add_input(wasmUtxo.output().address(), wasmUtxo.input(), wasmUtxo.output().amount())
-        }
-        txBuilder.set_inputs(txInputsBuilder)
         const changeAddress = await api?.getChangeAddress()
         const wasmChangeAddress = wasm.Address.from_bytes(hexToBytes(changeAddress))
         const wasmOutputAddress = buildTransactionInput.address ? buildTransactionInput.address : wasmChangeAddress
-        const wasmOutput = wasm.TransactionOutput.new(wasmOutputAddress, wasm.Value.new(wasm.BigNum.from_str(adaValue)))
+        const wasmOutput = wasm.TransactionOutput.new(wasmOutputAddress, wasm.Value.new(wasm.BigNum.from_str(buildTransactionInput.amount)))
         txBuilder.add_output(wasmOutput)
 
+        const hexUtxos = await api?.getUtxos()
+
+        const wasmUtxos = wasm.TransactionUnspentOutputs.new()
+        for (let i = 0; i < hexUtxos.length; i++) {
+            const wasmUtxo = wasm.TransactionUnspentOutput.from_bytes(hexToBytes(hexUtxos[i]))
+            wasmUtxos.add(wasmUtxo)
+        }
+        txBuilder.add_inputs_from(wasmUtxos, wasm.CoinSelectionStrategyCIP2.LargestFirstMultiAsset)
         txBuilder.add_change_if_needed(wasmChangeAddress)
 
         const wasmUnsignedTransaction = txBuilder.build_tx()

@@ -37,13 +37,6 @@ const ContractSave = ({ contractInfo, setContractInfo }) => {
         <>
             <div className="grid justify-items-center py-5 px-5">
                 <div className="block p-6 min-w-full rounded-lg border shadow-md bg-gray-800 border-gray-700">
-                    <div className="text-white">
-                        Note: Work in progress, it is not really usable at the moment. Please ignore this tab
-                    </div>
-                </div>
-            </div>
-            <div className="grid justify-items-center py-5 px-5">
-                <div className="block p-6 min-w-full rounded-lg border shadow-md bg-gray-800 border-gray-700">
                     <div className="mb-6">
                         <label htmlFor="address" className="block mb-2 text-sm font-medium text-gray-300">Contract Address</label>
                         <input type="text" id="address" className="border text-sm rounded-lg block w-full p-2.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white focus:ring-blue-500 focus:border-blue-500"
@@ -82,7 +75,8 @@ const SendToContract = ({ contractInfo }) => {
         },
         datum: ""
     })
-
+    const [inlineDatum, setInlineDatum] = useState(true)
+    const [inlineScript, setInlineScript] = useState(false)
     const [showAssetModal, setShowAssetModal] = useState(false)
     const [currentAssetInfo, setCurrentAssetInfo] = useState({ policyId: "", name: "", amount: "0" })
 
@@ -135,7 +129,16 @@ const SendToContract = ({ contractInfo }) => {
         // build the actual output, we need the output's Datum and the value. Then we output it all to the script's address
         const wasmDatum = wasm.encode_json_str_to_plutus_datum(JSON.stringify(sendTxInfo.datum))
 
-        wasmOutput.set_plutus_data(wasmDatum)
+        if (inlineDatum) {
+            wasmOutput.set_plutus_data(wasmDatum)
+        } else {
+            wasmOutput.set_data_hash(wasm.hash_plutus_data(wasmDatum))
+        }
+
+        if (inlineScript) {
+            wasmOutput.set_script_ref(wasm.ScriptRef.new_plutus_script(wasm.PlutusScript.from_hex(contractInfo.contractHex)))
+        }
+
         txBuilder.add_output(wasmOutput)
 
         // We want to build the inputs for this output, we can use the `add_inputs_from` function which can be used for UTXO selection
@@ -200,6 +203,17 @@ const SendToContract = ({ contractInfo }) => {
                     <textarea className="flex-row w-full rounded bg-gray-900 text-white px-2" value={sendTxInfo.datum}
                         onChange={(event) => { setSendTxInfo({ ...sendTxInfo, datum: event.target.value }) }}></textarea>
                 </div>
+                <div className="flex items-start mb-6">
+                    <div className="flex items-center h-5">
+                        <input id="inline-datum-check" type="checkbox" defaultChecked={inlineDatum} value={inlineDatum} onChange={() => setInlineDatum(!inlineDatum)} className="w-4 h-4 bg-gray-50 rounded border border-gray-300 focus:ring-3 focus:ring-blue-300 dark:bg-gray-700 dark:border-gray-600 dark:focus:ring-blue-600 dark:ring-offset-gray-800" />
+                    </div>
+                    <label htmlFor="inline-datum-check" className="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">Inline Datum</label>
+                    <div className="flex items-center h-5 pl-5">
+                        <input id="inline-script-check" type="checkbox" defaultChecked={inlineScript} value={inlineScript} onChange={() => setInlineScript(!inlineScript)} className="w-4 h-4 bg-gray-50 rounded border border-gray-300 focus:ring-3 focus:ring-blue-300 dark:bg-gray-700 dark:border-gray-600 dark:focus:ring-blue-600 dark:ring-offset-gray-800" />
+                    </div>
+                    <label htmlFor="inline-script-check" className="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">Inline Script</label>
+                </div>
+
                 {sendTxInfo.value.assets.map((v, idx) => {
                     return (
                         <div className="bg-gray-900 grid gap-6 md:grid-cols-2 px-5 py-5">
@@ -294,17 +308,24 @@ const SendToContract = ({ contractInfo }) => {
     );
 }
 
-const RedeemFromContract = () => {
+const RedeemFromContract = ({ contractInfo }) => {
     const { api } = useYoroi()
     const wasm = useWasm()
-    const jsonDataToWasmDatum = useJsonDataToWasmDatum()
 
     const [scriptInputInfo, setScriptInputInfo] = useState({
         transactionHash: "",
         outputId: ""
     })
 
-    const redeemFromContract = async ({ contractInfo }) => {
+    const [scriptInputList, setScriptInputList] = useState([])
+    const [inlinedDatum, setInlinedDatum] = useState(true)
+    const [inlinedScript, setInlinedScript] = useState(false)
+
+    const addInput = () => {
+        
+    }
+
+    const redeemFromContract = async () => {
         const txBuilder = wasm?.TransactionBuilder.new(
             wasm.TransactionBuilderConfigBuilder.new()
                 .fee_algo(
@@ -328,10 +349,10 @@ const RedeemFromContract = () => {
         const transactionHash = scriptInputInfo.transactionHash
         const outputId = scriptInputInfo.outputId
         const plutusScriptHex = contractInfo.contractHex
-        const wasmRedeemData = jsonDataToWasmDatum({
+        const wasmRedeemData = wasm.encode_json_str_to_plutus_datum(JSON.stringify({
             "fields": [],
             "constructor": 0
-        })
+        }))
 
         const wasmRedeemer = wasm.Redeemer.new(
             wasm.RedeemerTag.new_spend(),
@@ -350,7 +371,7 @@ const RedeemFromContract = () => {
         // So we will just build the entire script witness with datum first, we will manually remove the datum later
         const plutusScriptWitness = wasm.PlutusWitness.new(
             wasm.PlutusScript.from_bytes_v2(hexToBytes(plutusScriptHex)),
-            jsonDataToWasmDatum({ "int": 1 }),
+            wasm.encode_json_str_to_plutus_datum(JSON.stringify({ "int": 1 })),
             wasmRedeemer
         )
 
@@ -399,7 +420,7 @@ const RedeemFromContract = () => {
             wasmContractAddress,
             wasm.Value.new(wasm.BigNum.from_str("2000000"))
         )
-        wasmOutput.set_plutus_data(jsonDataToWasmDatum({ "int": 1 }))
+        wasmOutput.set_plutus_data(wasm.encode_json_str_to_plutus_datum(JSON.stringify({ "int": 1 })))
         txBuilder.add_output(wasmOutput)
 
         // We need to handle hashing of plutus witness. Because the datum is actually included inline within the script UTXO
@@ -470,94 +491,31 @@ const RedeemFromContract = () => {
                         value={scriptInputInfo.outputId} onChange={(event) => setScriptInputInfo({ ...scriptInputInfo, outputId: event.target.value })} />
                 </div>
             </div>
-            <div>
+            <div className="flex justify-between px-5 pb-5">
+                <div className="flex items-start mb-6">
+                    <div className="flex items-center h-5">
+                        <input id="inlined-datum-check" type="checkbox" defaultChecked={inlinedDatum} value={inlinedDatum} onChange={() => setInlinedDatum(!inlinedDatum)} className="w-4 h-4 bg-gray-50 rounded border border-gray-300 focus:ring-3 focus:ring-blue-300 dark:bg-gray-700 dark:border-gray-600 dark:focus:ring-blue-600 dark:ring-offset-gray-800" />
+                    </div>
+                    <label htmlFor="inlined-datum-check" className="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">Inlined Datum</label>
+                    <div className="flex items-center h-5 pl-5">
+                        <input id="inlined-script-check" type="checkbox" defaultChecked={inlinedScript} value={inlinedScript} onChange={() => setInlinedScript(!inlinedScript)} className="w-4 h-4 bg-gray-50 rounded border border-gray-300 focus:ring-3 focus:ring-blue-300 dark:bg-gray-700 dark:border-gray-600 dark:focus:ring-blue-600 dark:ring-offset-gray-800" />
+                    </div>
+                    <label htmlFor="inlined-script-check" className="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">Inlined Script</label>
+                </div>
+                <button type="button" className="text-white font-medium rounded-lg text-sm sm:w-auto px-5 py-2.5 text-center bg-blue-600 hover:bg-blue-700 focus:ring-blue-800"
+                    onClick={redeemFromContract}>Add as input</button>
+            </div>
+            <div className="mb-6 px-5">
+                <label className="block mb-2 text-sm font-medium text-gray-300">Input List</label>
+                <textarea className="flex-row w-full rounded bg-gray-900 text-white px-2" value={scriptInputList}
+                    onChange={(event) => { setScriptInputList({ ...scriptInputList, datum: event.target.value }) }}></textarea>
+            </div>
+            <div className="px-5">
                 <button type="button" className="text-white font-medium rounded-lg text-sm sm:w-auto px-5 py-2.5 text-center bg-blue-600 hover:bg-blue-700 focus:ring-blue-800"
                     onClick={redeemFromContract}>Redeem From Contract</button>
             </div>
-        </div>
+        </div >
     );
-}
-
-const useJsonDataToWasmDatum = () => {
-    const wasm = useWasm()
-
-    const jsonDataToWasmDatum = (data) => {
-        if (data === "") {
-            console.log("Empty Datum or Redeemer isn't allowed", "danger")
-            throw Error("Empty Datum")
-        }
-        const dataObj = (typeof (data) === "string") ? JSON.parse(data) : data
-        const keys = Object.keys(dataObj)
-        switch (keys[0]) {
-            case "fields":
-                if (dataObj.constructor === undefined) {
-                    console.log("Fields datum doesn't have a constructor property", "danger")
-                    return
-                }
-                if (dataObj.fields.length === 0) {
-                    return wasm.PlutusData.new_empty_constr_plutus_data(wasm.BigNum.from_str(String(dataObj.constructor)))
-                } else {
-                    const plutusList = wasm.PlutusList.new()
-                    for (let i = 0; i < dataObj.fields.length; i++) {
-                        plutusList.add(jsonDataToWasmDatum(dataObj.fields[i]))
-                    }
-                    return wasm.PlutusData.new_constr_plutus_data(
-                        wasm.ConstrPlutusData.new(
-                            wasm.BigNum.from_str(String(dataObj.constructor)),
-                            plutusList
-                        )
-                    )
-                }
-            case "constructor":
-                if (!dataObj.fields) {
-                    console.log("Constructor datum doesn't have a fields property", "danger")
-                    return
-                }
-                if (dataObj.fields.length === 0) {
-                    return wasm.PlutusData.new_empty_constr_plutus_data(wasm.BigNum.from_str(String(dataObj.constructor)))
-                } else {
-                    const plutusList = wasm.PlutusList.new()
-                    for (let i = 0; i < dataObj.fields.length; i++) {
-                        plutusList.add(jsonDataToWasmDatum(dataObj.fields[i]))
-                    }
-                    return wasm.PlutusData.new_constr_plutus_data(
-                        wasm.ConstrPlutusData.new(
-                            wasm.BigNum.from_str(String(dataObj.constructor)),
-                            plutusList
-                        )
-                    )
-                }
-            case "list":
-                const plutusList = wasm.PlutusList.new()
-                for (let i = 0; i < dataObj.list.length; i++) {
-                    plutusList.add(jsonDataToWasmDatum(dataObj.list))
-                }
-                return wasm.PlutusData.new_list(plutusList)
-            case "map":
-                if (dataObj.map.constructor.name === "Array") {
-                    const plutusList = wasm.PlutusList.new()
-                    for (let i = 0; i < dataObj.map.length; i++) {
-                        const plutusMap = wasm.PlutusMap.new()
-                        plutusMap.insert(jsonDataToWasmDatum(dataObj.map[i]["k"]), jsonDataToWasmDatum(dataObj.map[i]["v"]))
-                        plutusList.add(wasm.PlutusData.new_map(plutusMap))
-                    }
-                    return wasm.PlutusData.new_list(plutusList)
-                } else {
-                    const plutusMap = wasm.PlutusMap.new()
-                    plutusMap.insert(jsonDataToWasmDatum(dataObj.map["k"]), jsonDataToWasmDatum(dataObj.map["v"]))
-                    return wasm.PlutusData.new_map(plutusMap)
-                }
-            case "int":
-                return wasm.PlutusData.new_integer(wasm.BigInt.from_str(String(dataObj.int)))
-            case "bytes":
-                return wasm.PlutusData.new_bytes(hexToBytes(dataObj.bytes))
-            default:
-                console.log("Unknown data type detected, datum is probably incorrect", "danger")
-                throw Error("Invalid Datum")
-        }
-    }
-
-    return jsonDataToWasmDatum
 }
 
 export default ContractTab
