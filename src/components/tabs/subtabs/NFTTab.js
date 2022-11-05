@@ -7,11 +7,12 @@ import { hexToBytes, bytesToHex } from "../../../utils/utils";
 const NFTTab = () => {
     const { api } = useYoroi();
     const wasm = useWasm();
-    const [currentNFTName, setCurrentNFTName] = useState({nftName: ''});
-    const [currentImageUrl, setCurrentImageUrl] = useState({imageUrl: ''});
-    const [currentDescription, setCurrentDescription] = useState({description: ''});
+    const [currentNFTName, setCurrentNFTName] = useState('');
+    const [currentImageUrl, setCurrentImageUrl] = useState('');
+    const [currentDescription, setCurrentDescription] = useState('');
 
-    const splitBy64Char = (inputString) => {
+    const sliceBy64Char = (inputString) => {
+        console.log(`inputString: ${JSON.stringify(inputString)}`);
         if (inputString.length <= 64) {
             return inputString;
         }
@@ -22,30 +23,53 @@ const NFTTab = () => {
             resultArray.push(stringSlice);
         }
         return resultArray;
-    }
+    };
+
+    const clearInfo = () => {
+      setCurrentNFTName('');
+      setCurrentImageUrl('');
+      setCurrentDescription('');
+    };
 
     const [currentMintingInfo, setCurrentMintingInfo] = useState({
-        NFTName: "", metadata: JSON.stringify({
-            "name": "<string>",
-            "image": "<uri | array>",
-            "mediaType": "image/<mime_sub_type>",
-            "description": "<string | array>",
-            "files": [{
-                "name": "<string>",
-                "mediaType": "<mime_type>",
-                "src": "<uri | array>",
-                "<other_properties>": "<other_properties>"
+        NFTName: "",
+        metadata: {
+            name: "<string>",
+            image: "<uri | array>",
+            mediaType: "image/<mime_sub_type>",
+            tokenType: "nft",
+            description: "<string | array>",
+            totalSupply: 1,
+            files: [{
+              name: "<string>",
+              mediaType: "image/<mime_sub_type>",
+              src: "<uri | array>",
             }],
-        }, null, 4)
+        },
     });
+
     const [mintingTxInfo, setMintingTxInfo] = useState([]);
 
+    const generateMetadata = () => {
+        const name = currentNFTName.replace(/ /g, '_');
+        const imageUrl = sliceBy64Char(currentImageUrl);
+        const description = sliceBy64Char(currentDescription);
+        const newInfo = currentMintingInfo;
+        newInfo.NFTName = name;
+        newInfo.metadata.name = name;
+        newInfo.metadata.files[0].name = name;
+        newInfo.metadata.image = imageUrl;
+        newInfo.metadata.files[0].src = imageUrl;
+        newInfo.metadata.description = description;
+        setCurrentMintingInfo({...currentMintingInfo, ...newInfo});
+    };
+
     const pushMintInfo = () => {
-        let tempMintInfo = { NFTName: "", metadata: "" }
-        tempMintInfo.NFTName = currentMintingInfo.NFTName
-        tempMintInfo.metadata = JSON.parse(currentMintingInfo.metadata)
-        setMintingTxInfo(mintingTxInfo => [...mintingTxInfo, tempMintInfo])
-    }
+        let tempMintInfo = { NFTName: "", metadata: "" };
+        tempMintInfo.NFTName = currentMintingInfo.NFTName;
+        tempMintInfo.metadata = currentMintingInfo.metadata;
+        setMintingTxInfo(mintingTxInfo => [...mintingTxInfo, tempMintInfo]);
+    };
 
     const mint = async () => {
         const txBuilder = wasm?.TransactionBuilder.new(
@@ -88,8 +112,6 @@ const NFTTab = () => {
             )
         }
 
-        
-
         const hexInputUtxos = await api?.getUtxos()
 
         const wasmUtxos = wasm.TransactionUnspentOutputs.new()
@@ -126,7 +148,7 @@ const NFTTab = () => {
                         console.log(err)
                     })
             })
-    }
+    };
 
     return (
         <>
@@ -153,7 +175,7 @@ const NFTTab = () => {
                                 type="text"
                                 id="NFTName"
                                 className="border text-sm rounded-lg block w-full p-2.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white focus:ring-blue-500 focus:border-blue-500"
-                                value={currentNFTName.nftName} onChange={(event) => { setCurrentNFTName({ ...currentNFTName, nftName: event.target.value }) }}
+                                value={currentNFTName} onChange={(event) => { setCurrentNFTName(event.target.value) }}
                               />
                             </div>
                           <div className="mb-6 pr-4">
@@ -164,7 +186,7 @@ const NFTTab = () => {
                               type="text"
                               id="ImageURL"
                               className="border text-sm rounded-lg block w-full p-2.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white focus:ring-blue-500 focus:border-blue-500"
-                              value={currentImageUrl.imageUrl} onChange={(event) => { setCurrentImageUrl({ ...currentImageUrl, imageUrl: event.target.value }) }}
+                              value={currentImageUrl} onChange={(event) => { setCurrentImageUrl(event.target.value) }}
                             />
                           </div>
                           <div className="mb-6 pr-4">
@@ -175,15 +197,18 @@ const NFTTab = () => {
                               type="text"
                               id="Description"
                               className="border text-sm rounded-lg block w-full p-2.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white focus:ring-blue-500 focus:border-blue-500"
-                              value={currentDescription.description} onChange={(event) => { setCurrentDescription({ ...currentDescription, description: event.target.value }) }}
+                              value={currentDescription} onChange={(event) => { setCurrentDescription(event.target.value) }}
                             />
                           </div>
                         </div>
                         <div className="flex-1">
                            <div className="mb-6">
                                 <label className="block mb-2 text-sm font-medium text-gray-300">Metadata JSON</label>
-                                <textarea className="flex-row w-full rounded bg-gray-900 text-white px-2 readonly" rows="10" readOnly
-                                      value={currentMintingInfo.metadata} onChange={(event) => { setCurrentMintingInfo({ ...currentMintingInfo, metadata: event.target.value }) }}>
+                                <textarea
+                                  className="flex-row w-full rounded bg-gray-900 text-white px-2 readonly"
+                                  rows="10"
+                                  readOnly
+                                  value={JSON.stringify(currentMintingInfo, null, 4)}>
                                 </textarea>
                             </div>
                         </div>
@@ -195,8 +220,16 @@ const NFTTab = () => {
                           <button
                             type="button"
                             className="text-white font-medium rounded-lg text-sm sm:w-auto px-5 py-2.5 text-center bg-blue-600 hover:bg-blue-700 focus:ring-blue-800"
+                            onClick={generateMetadata}
                           >
                             Generate
+                          </button>
+                          <button
+                            type="button"
+                            className="text-white font-medium rounded-lg text-sm sm:w-auto mx-5 px-5 py-2.5 text-center bg-red-600 hover:bg-red-700 focus:ring-red-800"
+                            onClick={clearInfo}
+                          >
+                            Clear Info
                           </button>
                         </div>
                       </div>
